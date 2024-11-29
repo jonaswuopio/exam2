@@ -279,11 +279,11 @@ It seems as the code finds the min torque value and the max torque value of the 
 
 ```{r}
 # Remove everything except time and Torque
-min_list <- min_list %>% ___(. %>% _______(______________) %>% dplyr::mutate(local = 'min'))
-max_list <- max_list %>% ___(. %>% _______(______________) %>% dplyr::mutate(local = 'max'))
+min_list <- min_list %>% map(. %>% select(time, Torque) %>% dplyr::mutate(local = 'min'))
+max_list <- max_list %>% map(. %>% select(time, Torque) %>% dplyr::mutate(local = 'max'))
 
 # Combine two lists
-min_max_list <- ___(min_list, max_list, ~ ___(.x, .y))
+min_max_list <- map2(min_list, max_list, ~ rbind(.x, .y))
 
 # Print head of all dfs in the list
 map(min_max_list, head)
@@ -297,12 +297,13 @@ map(min_max_list, head)
 * Also define a new data frame *info* with corresponding labels for *before* and *after* exercise based on the files patterns *BID* and *R2*.
 
 ```{r}
-# Extract the speed info
-speed <- _________ %>% 
-  map(______, nrows = 1, header = T, col.names = 'info') %>% # read in the files
-  map(. %>% tibble::_________(var = 'id')) %>% # assign row names to column  
-  map(. %>% ______('note', id:info, sep = ': ', remove = T)) %>% # unite to columns into one 
-  set_names(_________) # define the names for each df in a list
+setwd("C:/Users/jonwuo/OneDrive - Karolinska Institutet/Dokument/Forskning/Kurser/Intermediate R/Exam")
+
+speed <- all_files %>%  # Use all_files (list of file paths) as input
+  map(~ read.table(.x, nrows = 1, header = TRUE, col.names = 'info')) %>%  # Read the first row of each file and assign column name 'info'
+  map(. %>% tibble::rowid_to_column(var = 'id')) %>%  # Add row IDs as a column called 'id'
+  map(. %>% unite('note', id:info, sep = ': ', remove = T)) %>%  # Unite 'id' and 'info' into one column 'note'
+  set_names(all_files)  # Set names of the resulting list based on the file names
 
 # Print head of all dfs in the list
 map(speed, head)
@@ -316,6 +317,7 @@ info <- data.frame(path = all_files,
 # print info
 print(info)
 ```
+
 *You can double check speed output in "exam_help_file.pdf".*
 
 
@@ -325,26 +327,28 @@ print(info)
 
 ```{r}
 # Create a list of plots for all 16 files.
-plots_all <- __________(1:length(__________), function(i) {
+plots_all <- lapply(1:length(df_lst_long), function(i) {
   
-  ggplot(data = __________[[i]], aes(x = time, y = value)) + # define main ggplot 
-    ______(aes(col = name)) + # define lines
-    geom_point(data = __________[[i]], aes(x = time, y = Torque)) + # define global min and max point of TORQUE variable
-    ______(data = __________[[i]], aes(x = ______, y = Torque, ______ = round(Torque, 2)), # define values of global min and max TORQUE variable
+  ggplot(data = df_lst_long[[i]], aes(x = time, y = value)) + # define main ggplot 
+    geom_line(aes(col = name)) + # define lines
+    geom_point(data = min_max_list[[i]], aes(x = time, y = Torque)) + # define global min and max point of TORQUE variable
+    geom_text(data = min_max_list[[i]], aes(x = time, y = Torque, label = round(Torque, 2)), # define values of global min and max TORQUE variable
               size = 3,
-              vjust = ifelse(__________[[i]]$Torque >= 0, -1, 2)) +
+              vjust = ifelse(min_max_list[[i]]$Torque >= 0, -1, 2)) +
     theme_bw() + 
-    ______(panel.grid.minor = __________(),# remove grid.minor on both axis
-          __________ = element_blank(), # remove grid.major only on the x-axis
+    theme(
+          panel.grid.minor = element_blank(),
+          panel.grid.major.x = element_blank(),# remove grid.minor on both axis
+          panel.grid.major.y = element_line(color = "grey"), # remove grid.major only on the x-axis
           legend.position = 'bottom') + 
     labs(col = '', y = 'Value', x = 'Time(min)', # define the legend title, x, y, title and subtitle
-         title = paste('File:', names(speed)[___]),
-         subtitle = ______(info[___, 'condition'], '\n',str_to_title(speed[[___]]$note)))
+        title = paste('File:', names(speed)[i]),
+        subtitle = paste(info[i, 'condition'], '\n',str_to_title(speed[[i]]$note)))
   
 })
 
 # print third figure
-plots_all[[___]]
+plots_all[[3]]
 ```
 *You can double check your final output of this chunk in "exam_help_file.pdf".* 
 
@@ -356,8 +360,8 @@ plots_all[[___]]
 ```{r}
 # Save the plots in the single .pdf file
 pdf(file = paste0(read_in, '/results_figs.pdf'))
-______(plots_all, function(___) plot(___))
-______()
+lapply(plots_all, function(p) plot(p))
+dev.off()
 ```
 *THE END :)*
 
