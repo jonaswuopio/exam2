@@ -302,7 +302,7 @@ setwd("C:/Users/jonwuo/OneDrive - Karolinska Institutet/Dokument/Forskning/Kurse
 speed <- all_files %>%  # Use all_files (list of file paths) as input
   map(~ read.table(.x, nrows = 1, header = TRUE, col.names = 'info')) %>%  # Read the first row of each file and assign column name 'info'
   map(. %>% tibble::rowid_to_column(var = 'id')) %>%  # Add row IDs as a column called 'id'
-  map(. %>% unite('note', id:info, sep = ': ', remove = T)) %>%  # Unite 'id' and 'info' into one column 'note'
+  map(. %>% unite('note', id:info, sep = ':speed', remove = T)) %>%  # Unite 'id' and 'info' into one column 'note'
   set_names(all_files)  # Set names of the resulting list based on the file names
 
 # Print head of all dfs in the list
